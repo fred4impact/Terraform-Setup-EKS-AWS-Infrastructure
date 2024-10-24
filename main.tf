@@ -9,6 +9,43 @@ module "vpc" {
   public_subnet_cidrs = var.public_subnet_cidrs
 }
 
+# EC2 Module
+module "ec2" {
+  source = "./modules/ec2"
+
+  instance_name   = "my-ec2-instance"
+  ami             = var.ec2_ami
+  instance_type   = var.ec2_instance_type
+  key_pair_name   = var.ec2_key_pair_name
+  subnet_id       = element(module.vpc.public_subnet_ids, 0)
+  vpc_id          = module.vpc.vpc_id
+
+  ingress_rules = [
+    {
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    },
+    {
+      from_port   = 80
+      to_port     = 80
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  ]
+
+  egress_rules = [
+    {
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  ]
+}
+
+
 module "eks" {
   source = "./modules/eks"
 

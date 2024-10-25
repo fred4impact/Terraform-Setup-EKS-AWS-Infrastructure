@@ -3,29 +3,23 @@ variable "cluster_name" {
   type        = string
 }
 
-variable "vpc_id" {
-  description = "ID of the VPC"
+variable "cluster_role_arn" {
+  description = "IAM role ARN for the EKS control plane"
   type        = string
 }
 
 variable "subnet_ids" {
-  description = "List of subnet IDs"
+  description = "List of subnet IDs for the EKS cluster"
   type        = list(string)
 }
 
-variable "node_instance_type" {
-  description = "Instance type for the EKS worker nodes"
+variable "cluster_security_group_id" {
+  description = "Security group ID for the EKS cluster"
   type        = string
-  default     = "t2.micro"
 }
 
-variable "node_count" {
-  description = "Number of worker nodes in the EKS cluster"
-  type        = number
-  default     = 3
-}
-
-variable "key_pair_name" {
-  description = "EC2 Key Pair name for SSH access"
-  type        = string
+variable "enabled_cluster_log_types" {
+  description = "List of cluster log types to enable"
+  type        = list(string)
+  default     = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 }

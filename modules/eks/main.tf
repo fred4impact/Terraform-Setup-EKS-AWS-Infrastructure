@@ -1,17 +1,12 @@
-module "eks" {
-  source          = "terraform-aws-modules/eks/aws"
-  cluster_name    = var.cluster_name
-  cluster_version = "1.21"
-  subnets         = var.subnet_ids
-  vpc_id          = var.vpc_id
+resource "aws_eks_cluster" "this" {
+  name     = var.cluster_name
+  role_arn = var.cluster_role_arn
 
-  node_groups = {
-    eks_nodes = {
-      desired_capacity = var.node_count
-      max_capacity     = var.node_count + 2
-      min_capacity     = 1
-      instance_type    = var.node_instance_type
-      key_name         = var.key_pair_name
-    }
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [var.cluster_security_group_id]
   }
+
+  # Optional cluster logging configuration
+  enabled_cluster_log_types = var.enabled_cluster_log_types
 }

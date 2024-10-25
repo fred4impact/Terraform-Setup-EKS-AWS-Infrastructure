@@ -2,6 +2,7 @@ provider "aws" {
   region = var.aws_region
 }
 
+# VPC
 module "vpc" {
   source = "./modules/vpc"
 
@@ -9,60 +10,41 @@ module "vpc" {
   public_subnet_cidrs = var.public_subnet_cidrs
 }
 
-# EC2 Module
-module "ec2" {
-  source = "./modules/ec2"
-
-  instance_name   = "my-ec2-instance"
-  ami             = var.ec2_ami
-  instance_type   = var.ec2_instance_type
-  key_pair_name   = var.ec2_key_pair_name
-  subnet_id       = element(module.vpc.public_subnet_ids, 0)
-  vpc_id          = module.vpc.vpc_id
-
-  ingress_rules = [
-    {
-      from_port   = 22
-      to_port     = 22
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
-    },
-    {
-      from_port   = 80
-      to_port     = 80
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
-    }
-  ]
-
-  egress_rules = [
-    {
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_blocks = ["0.0.0.0/0"]
-    }
-  ]
+# Security Group
+module "security_group" {
+  source      = "./modules/security_group"
+  cluster_name = var.cluster_name
+  vpc_id       = module.vpc.vpc_id
 }
 
-
-module "eks" {
-  source = "./modules/eks"
-
-  cluster_name        = var.eks_cluster_name
-  vpc_id              = module.vpc.vpc_id
-  subnet_ids          = module.vpc.public_subnet_ids
-  node_instance_type  = var.eks_node_instance_type
-  node_count          = var.eks_node_count
-  key_pair_name       = var.key_pair_name
-}
-
-module "ecr" {
-  source = "./modules/ecr"
-  use_ecr = var.use_ecr
-  ecr_repos = var.ecr_repos
-}
-
+# IAM
 module "iam" {
   source = "./modules/iam"
+
+  eks_cluster_role_name     = var.eks_cluster_role_name
+  eks_node_group_role_name  = var.eks_node_group_role_name
+}
+
+# EKS Cluster
+module "eks_cluster" {
+  source                   = "./modules/eks"
+  cluster_name             = var.cluster_name
+  cluster_role_arn         = module.iam.eks_cluster_role_arn
+  subnet_ids               = module.vpc.public_subnet_ids
+  cluster_security_group_id = module.security_group.eks_cluster_security_group_id
+}
+
+# EKS Node Group
+module "eks_node_group" {
+  source                = "./modules/eks_node_group"
+  cluster_name          = module.eks_cluster.cluster_id
+  node_group_name       = var.node_group_name
+  node_role_arn         = module.iam.eks_node_group_role_arn
+  subnet_ids            = module.vpc.public_subnet_ids
+  desired_size          = var.node_count
+  max_size              = var.node_count + 2
+  min_size              = var.node_count
+  instance_types        = ["t2.large"]
+  ec2_ssh_key           = var.ec2_ssh_key
+  node_security_group_id = module.security_group.eks_node_security_group_id
 }
